@@ -36,7 +36,7 @@ const SPECIAL_GIFTS = [
 ];
 
 function SpecialGiftModel({ gift, onClose }: { gift: any, onClose: () => void }) {
-  const { scene } = useGLTF(gift.model);
+  const { scene } = useGLTF(gift.model) as any;
   const clone = useMemo(() => scene.clone(), [scene]);
   const { viewport } = useThree();
   const isMobile = viewport.width < 10;
