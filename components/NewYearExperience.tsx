@@ -69,10 +69,11 @@ function SpecialGiftModel({ gift, onClose }: { gift: any, onClose: () => void })
   
   // Responsive adjustments
   const finalScale = isMobile ? gift.scale * 0.6 : gift.scale;
-  const finalOffset = isMobile && gift.id === 'banhchung' ? [0, -1, 0] : (gift.offset || [0, 0, 0]);
-  const finalTextPosition = isMobile && gift.id === 'banhchung' ? [0, 3, 0] : (gift.textPosition || [0, 4, 0]);
-  const finalTextAlign = isMobile && gift.id === 'banhchung' ? 'center' : (gift.textAlign || 'center');
-  const finalAnchorX = isMobile && gift.id === 'banhchung' ? 'center' : (gift.anchorX || 'center');
+  // Force center alignment on mobile for all gifts to ensure visibility and focus
+  const finalOffset = isMobile ? [0, -1, 0] : (gift.offset || [0, 0, 0]);
+  const finalTextPosition = isMobile ? [0, 3.5, 0] : (gift.textPosition || [0, 4, 0]);
+  const finalTextAlign = isMobile ? 'center' : (gift.textAlign || 'center');
+  const finalAnchorX = isMobile ? 'center' : (gift.anchorX || 'center');
 
   // Generate random positions for extra lotuses if it is lotus
   const extraLotuses = useMemo(() => {
@@ -111,7 +112,7 @@ function SpecialGiftModel({ gift, onClose }: { gift: any, onClose: () => void })
         <primitive 
             ref={modelRef}
             object={clone} 
-            scale={gift.scale * 7} 
+            scale={finalScale * 7} 
             position={finalOffset} 
             rotation={gift.rotation || [0, 0, 0]}
         />
@@ -263,7 +264,9 @@ function LuckyMoneyBill({ value, label, color }: { value: string, label: string,
 function BanModel() {
   const { scene } = useGLTF("/models/ban.glb");
   const clone = useMemo(() => scene.clone(), [scene]);
-  return <primitive object={clone} scale={1} position={[0, -1, 0]} />;
+  const { viewport } = useThree();
+  const isMobile = viewport.width < 10;
+  return <primitive object={clone} scale={isMobile ? 0.6 : 1} position={[0, -1, 0]} />;
 }
 
 function BaolixiModel({ onClick }: { onClick: () => void }) {
@@ -271,6 +274,8 @@ function BaolixiModel({ onClick }: { onClick: () => void }) {
   const clone = useMemo(() => scene.clone(), [scene]);
   const ref = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
+  const { viewport } = useThree();
+  const isMobile = viewport.width < 10;
 
   useFrame((state) => {
     if (ref.current) {
@@ -280,7 +285,9 @@ function BaolixiModel({ onClick }: { onClick: () => void }) {
       ref.current.rotation.y = time * 0.5;
       
       // Scale effect on hover
-      const targetScale = hovered ? 0.6 : 0.5;
+      const baseScale = isMobile ? 0.4 : 0.5;
+      const hoverScale = isMobile ? 0.5 : 0.6;
+      const targetScale = hovered ? hoverScale : baseScale;
       ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     }
   });
@@ -325,12 +332,15 @@ function CameraTransition({ targetPosition }: { targetPosition: [number, number,
 
   useEffect(() => {
     setIsMoving(true);
+    // Force stop transition after 2 seconds to allow OrbitControls to take over
+    const timeout = setTimeout(() => setIsMoving(false), 2000);
+    return () => clearTimeout(timeout);
   }, [targetPosition[0], targetPosition[1], targetPosition[2]]);
 
   useFrame((state) => {
     if (isMoving) {
       state.camera.position.lerp(target, 0.05);
-      if (state.camera.position.distanceTo(target) < 0.1) {
+      if (state.camera.position.distanceTo(target) < 0.5) {
         setIsMoving(false);
       }
     }
@@ -350,8 +360,12 @@ function Scene({ onBaolixiClick, onGiftBoxClick, specialGift, onCloseSpecialGift
   const isMobile = viewport.width < 10;
 
   // Camera states
-  const defaultCameraPos: [number, number, number] = isMobile ? [0, 4, 8] : [0, 5, 12];
-  const giftCameraPos: [number, number, number] = isMobile ? [15, 2, 8] : [15, 5, 12];
+  const defaultCameraPos: [number, number, number] = isMobile ? [0, 6, 18] : [0, 5, 12];
+  const giftCameraPos: [number, number, number] = isMobile ? [15, 4, 18] : [15, 5, 12];
+
+  // Responsive positions
+  const baolixiPos: [number, number, number] = isMobile ? [-1.5, 0.5, 1.5] : [-3.8, 0.8, 1.0];
+  const giftButtonPos: [number, number, number] = isMobile ? [0, 2.5, 0] : [-1.2, 1.5, -0.8];
 
   return (
     <>
@@ -366,9 +380,9 @@ function Scene({ onBaolixiClick, onGiftBoxClick, specialGift, onCloseSpecialGift
       <group position={[0, -0.5, 0]}>
         <BanModel />
         {!isWelcomeVisible && !specialGift && !isRewardOpen && (
-            <GiftButton onClick={onGiftBoxClick} position={[-1.2, 1.5, -0.8]} />
+            <GiftButton onClick={onGiftBoxClick} position={giftButtonPos} />
         )}
-        <group position={[-3.8, 0.8, 1.0]}>
+        <group position={baolixiPos}>
             <BaolixiModel onClick={onBaolixiClick} />
         </group>
       </group>
