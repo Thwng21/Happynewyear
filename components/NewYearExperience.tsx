@@ -30,9 +30,28 @@ const MONEY_VALUES = [
 const SPECIAL_GIFTS = [
   { id: 'dog', model: "/models/dog.glb", text: "Năm mới bớt sống chó lại nha bạn!", type: "funny", scale: 1.5, offset: [0, -1, 0] },
   { id: 'hacker', model: "/models/hacker.glb", text: "Cẩn thận kẻo bị hack Facebook đó!", type: "funny", scale: 0.5, offset: [0, -2.5, 0] },
-  { id: 'hoasen', model: "/models/hoasen.glb", text: "Chúc cho tâm hồn thanh cao như đóa sen hồng", type: "serious", scale: 2.0, offset: [0, -2, 0] },
+  { 
+    id: 'hoasen', 
+    model: "/models/hoasen.glb", 
+    text: "Chúc cho tâm hồn thanh cao như đóa sen hồng", 
+    type: "serious", 
+    scale: 2.0, 
+    offset: [2, -2, 0], 
+    textPosition: [-1.5, 2, 0],
+    textAlign: 'right',
+    autoRotate: true
+  },
   { id: 'banhchung', model: "/models/banhchung.glb", text: "Tết này ấm no, bánh chưng đầy thịt", type: "serious", scale: 1.0, offset: [-2, -0.5, 0], textPosition: [1.5, 0, 0], textAlign: 'left', anchorX: 'left' },
-  { id: 'dienthoai', model: "/models/dienthoai.glb", text: "Chúc năm nay mua được ip17 promax", type: "serious", scale: 2.5, offset: [0, 0, 0] },
+  { 
+    id: 'dienthoai', 
+    model: "/models/dienthoai.glb", 
+    text: "Chúc năm nay mua được ip17 promax", 
+    type: "serious", 
+    scale: 2.5, 
+    offset: [0, 0, 0],
+    rotation: [0, Math.PI, 0],
+    autoRotate: true
+  },
 ];
 
 function SpecialGiftModel({ gift, onClose }: { gift: any, onClose: () => void }) {
@@ -40,6 +59,13 @@ function SpecialGiftModel({ gift, onClose }: { gift: any, onClose: () => void })
   const clone = useMemo(() => scene.clone(), [scene]);
   const { viewport } = useThree();
   const isMobile = viewport.width < 10;
+  const modelRef = useRef<THREE.Group>(null);
+
+  useFrame((state, delta) => {
+    if (gift.autoRotate && modelRef.current) {
+      modelRef.current.rotation.y += delta * 0.5;
+    }
+  });
   
   // Responsive adjustments
   const finalScale = isMobile ? gift.scale * 0.6 : gift.scale;
@@ -48,13 +74,46 @@ function SpecialGiftModel({ gift, onClose }: { gift: any, onClose: () => void })
   const finalTextAlign = isMobile && gift.id === 'banhchung' ? 'center' : (gift.textAlign || 'center');
   const finalAnchorX = isMobile && gift.id === 'banhchung' ? 'center' : (gift.anchorX || 'center');
 
+  // Generate random positions for extra lotuses if it is lotus
+  const extraLotuses = useMemo(() => {
+    if (gift.id !== 'hoasen') return [];
+    return Array.from({ length: 20 }).map(() => ({
+      position: [
+        (Math.random() - 0.5) * 20, 
+        (Math.random() - 0.5) * 12, 
+        (Math.random() - 0.5) * 10 - 2
+      ] as [number, number, number],
+      scale: gift.scale * (2 + Math.random() * 3),
+      rotation: [Math.random() * 0.5, Math.random() * Math.PI * 2, 0] as [number, number, number],
+      speed: 0.5 + Math.random()
+    }));
+  }, [gift.id, gift.scale]);
+
+  const lotusClones = useMemo(() => {
+      if (gift.id !== 'hoasen') return [];
+      return extraLotuses.map(() => scene.clone());
+  }, [scene, gift.id, extraLotuses]);
+
   return (
-    <group position={[15, 2, 0]} scale={isMobile ? 0.6 : 1}>
+    <group position={[15, 2, 0]} scale={isMobile ? 1.5 : 1}>
+      {/* Extra Lotuses Background */}
+      {gift.id === 'hoasen' && extraLotuses.map((props, i) => (
+        <Float key={i} speed={props.speed} rotationIntensity={1} floatIntensity={1} position={props.position}>
+             <primitive 
+                object={lotusClones[i]} 
+                scale={props.scale} 
+                rotation={props.rotation}
+            />
+        </Float>
+      ))}
+
       <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
         <primitive 
+            ref={modelRef}
             object={clone} 
             scale={gift.scale * 7} 
             position={finalOffset} 
+            rotation={gift.rotation || [0, 0, 0]}
         />
         <Text
             position={finalTextPosition}
@@ -136,48 +195,48 @@ function LuckyMoneyBill({ value, label, color }: { value: string, label: string,
         <div className="absolute inset-1 border border-solid opacity-30 rounded-sm" style={{ borderColor: color }}></div>
         
         {/* Content */}
-        <div className="relative w-full h-full flex flex-col items-center justify-between p-6 z-10">
+        <div className="relative w-full h-full flex flex-col items-center justify-between p-2 md:p-6 z-10">
             {/* Top Row */}
             <div className="w-full flex justify-between items-start">
                 <div className="flex flex-col items-start">
-                    <span className="font-bold text-2xl font-serif" style={{ color: color }}>{value}</span>
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">Ngân Hàng GWOUTH</span>
+                    <span className="font-bold text-lg md:text-2xl font-serif" style={{ color: color }}>{value}</span>
+                    <span className="text-[8px] md:text-[10px] text-gray-400 uppercase tracking-wider hidden md:block">Ngân Hàng GWOUTH</span>
                 </div>
-                <div className="flex flex-col items-center">
-                    <div className="text-xs font-serif uppercase tracking-[0.3em] text-gray-600 font-bold">Cộng Hòa Xã Hội Chủ Nghĩa THÂN THƯƠNG</div>
-                    <div className="text-[10px] font-serif text-gray-500">Độc lập - Tự do - Hạnh phúc</div>
+                <div className="flex flex-col items-center text-center mx-2 flex-1">
+                    <div className="text-[8px] md:text-[10px] lg:text-xs font-serif uppercase tracking-widest md:tracking-[0.15em] text-gray-600 font-bold whitespace-nowrap">Cộng Hòa Xã Hội Chủ Nghĩa THÂN THƯƠNG</div>
+                    <div className="text-[8px] md:text-[10px] font-serif text-gray-500 whitespace-nowrap">Độc lập - Tự do - Hạnh phúc</div>
                 </div>
-                <span className="font-bold text-2xl font-serif" style={{ color: color }}>{value}</span>
+                <span className="font-bold text-lg md:text-2xl font-serif" style={{ color: color }}>{value}</span>
             </div>
 
             {/* Center */}
-            <div className="flex flex-row items-center justify-center w-full gap-8">
+            <div className="flex flex-row items-center justify-center w-full gap-2 md:gap-8">
                 {/* Left Emblem */}
-                <div className="w-24 h-24 rounded-full border-2 flex items-center justify-center bg-white/40 backdrop-blur-[1px]" 
+                <div className="w-12 h-12 md:w-24 md:h-24 rounded-full border-2 flex items-center justify-center bg-white/40 backdrop-blur-[1px]" 
                      style={{ borderColor: color }}>
-                     <div className="w-20 h-20 rounded-full border border-dashed flex items-center justify-center opacity-80" style={{ borderColor: color }}>
-                        <span className="text-4xl filter grayscale opacity-70">🌸</span>
+                     <div className="w-10 h-10 md:w-20 md:h-20 rounded-full border border-dashed flex items-center justify-center opacity-80" style={{ borderColor: color }}>
+                        <span className="text-xl md:text-4xl filter grayscale opacity-70">🌸</span>
                      </div>
                 </div>
 
                 {/* Center Value */}
                 <div className="flex flex-col items-center">
-                    <div className="text-6xl font-bold font-serif tracking-tighter drop-shadow-sm" 
+                    <div className="text-3xl md:text-6xl font-bold font-serif tracking-tighter drop-shadow-sm" 
                          style={{ 
                              color: color,
                              textShadow: '1px 1px 0px rgba(0,0,0,0.1)'
                          }}>
                         {value}
                     </div>
-                    <div className="text-xs font-bold uppercase tracking-[0.2em] mt-2 text-gray-700 border-t border-b py-1" style={{ borderColor: color }}>
+                    <div className="text-[8px] md:text-xs font-bold uppercase tracking-widest md:tracking-[0.2em] mt-1 md:mt-2 text-gray-700 border-t border-b py-0.5 md:py-1" style={{ borderColor: color }}>
                         {label}
                     </div>
                 </div>
 
                 {/* Right Portrait Placeholder (Silhouette) */}
-                <div className="w-24 h-32 rounded-full/10 border flex items-center justify-center bg-gradient-to-b from-transparent to-gray-100/50 overflow-hidden relative"
+                <div className="w-12 h-16 md:w-24 md:h-32 rounded-full/10 border flex items-center justify-center bg-gradient-to-b from-transparent to-gray-100/50 overflow-hidden relative"
                      style={{ borderColor: color }}>
-                     <div className="absolute bottom-0 w-20 h-24 bg-gray-300/30 rounded-t-full blur-sm"></div>
+                     <div className="absolute bottom-0 w-10 h-12 md:w-20 md:h-24 bg-gray-300/30 rounded-t-full blur-sm"></div>
                 </div>
             </div>
 
@@ -287,9 +346,12 @@ function Scene({ onBaolixiClick, onGiftBoxClick, specialGift, onCloseSpecialGift
     isWelcomeVisible: boolean,
     isRewardOpen: boolean
 }) {
+  const { viewport } = useThree();
+  const isMobile = viewport.width < 10;
+
   // Camera states
-  const defaultCameraPos: [number, number, number] = [0, 5, 12];
-  const giftCameraPos: [number, number, number] = [15, 5, 12];
+  const defaultCameraPos: [number, number, number] = isMobile ? [0, 4, 8] : [0, 5, 12];
+  const giftCameraPos: [number, number, number] = isMobile ? [15, 2, 8] : [15, 5, 12];
 
   return (
     <>
@@ -361,7 +423,9 @@ export default function NewYearExperience() {
           <OrbitControls 
             enableZoom={true} 
             autoRotate={true} // Always auto rotate
-            autoRotateSpeed={0.5} 
+            autoRotateSpeed={2.0} 
+            enableDamping={true}
+            dampingFactor={0.05}
             minPolarAngle={0} 
             maxPolarAngle={Math.PI / 2} 
             target={specialGift ? [15, 2, 0] : [0, 0, 0]} // Update target for controls
@@ -421,7 +485,7 @@ export default function NewYearExperience() {
               initial={{ scale: 0.5, y: 100 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.5, y: 100 }}
-              className="bg-[#a00000] p-8 rounded-2xl border-4 border-[#ffd700] max-w-md w-full text-center shadow-[0_0_50px_rgba(255,215,0,0.3)] relative overflow-hidden"
+              className="bg-[#a00000] p-4 md:p-8 rounded-2xl border-4 border-[#ffd700] max-w-2xl w-full text-center shadow-[0_0_50px_rgba(255,215,0,0.3)] relative overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
                {/* Decorative patterns */}
